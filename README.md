@@ -1,6 +1,6 @@
 # Mini Application - User Registration & Authentication
 
-A full-stack web application with user registration and authentication features built with Spring Boot and React.
+A full-stack web application with user registration and authentication features built with Spring Boot and React. This App can Login and Sign Up.
 
 ## Tech Stack
 
@@ -150,6 +150,7 @@ The frontend will start on `http://localhost:5173`
     └── package.json
 ```
 
-## License
+## Note
 
-This project is for educational purposes.
+Can go through the other pages
+
