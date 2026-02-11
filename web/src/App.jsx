@@ -2,17 +2,75 @@ import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
+document.body.style.margin = "0";
+
 const API_BASE = 'http://localhost:8080/api/auth';
 
-// Simple style object to avoid over-engineering with CSS files
 const styles = {
-  container: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif' },
-  card: { border: '1px solid #ccc', padding: '20px', borderRadius: '8px', width: '300px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' },
-  input: { width: '100%', padding: '10px', margin: '10px 0', boxSizing: 'border-box' },
-  button: { width: '100%', padding: '10px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
-  link: { marginTop: '10px', color: '#007bff', textDecoration: 'none', fontSize: '14px' }
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '100vh',
+    width: '100vw',
+    fontFamily: 'sans-serif',
+    backgroundColor: '#fff'
+  },
+  card: {
+    padding: '40px',
+    width: '320px'
+  },
+  input: {
+    width: '100%',
+    padding: '12px',
+    margin: '12px 0',
+    border: '1px solid #000',
+    fontSize: '14px',
+    outline: 'none'
+  },
+  button: {
+    width: '100%',
+    padding: '12px',
+    backgroundColor: '#000',
+    color: 'white',
+    border: 'none',
+    fontSize: '14px',
+    cursor: 'pointer',
+    marginTop: '20px'
+  },
+  link: {
+    display: 'block',
+    marginTop: '20px',
+    color: '#000',
+    textDecoration: 'none',
+    fontSize: '13px',
+    textAlign: 'center'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: '400',
+    marginBottom: '30px'
+  },
+  text: {
+    fontSize: '14px',
+    margin: '10px 0'
+  }
 };
 
+// Protected Route
+const ProtectedRoute = ({ children }) => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  return user ? children : <Navigate to="/login" replace />;
+};
+
+// Dashboard Layout
+const DashboardLayout = ({ children }) => (
+  <div>
+    {children}
+  </div>
+);
+
+// Login
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,61 +79,62 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      // Backend uses @RequestParam for login
-      const res = await axios.post(`${API_BASE}/login?email=${email}&password=${password}`);
+      const res = await axios.post(`${API_BASE}/login`, null, {
+        params: { email, password }
+      });
       if (res.data === 'Login Successful') {
-        localStorage.setItem('user', JSON.stringify({ email }));
-        navigate('/profile');
+        localStorage.setItem('user', JSON.stringify({ email, name: email.split('@')[0] }));
+        navigate('/profile', { replace: true });
       } else {
         alert(res.data);
       }
-    } catch (err) {
-      alert('Login failed. Is the backend running?');
+    } catch (error) {
+      alert('Login failed.');
     }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2>Login</h2>
+        <div style={styles.title}>Login</div>
         <form onSubmit={handleLogin}>
           <input style={styles.input} type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
           <input style={styles.input} type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
           <button style={styles.button} type="submit">Login</button>
         </form>
-        <Link to="/signup" style={styles.link}>Don't have an account? Sign up</Link>
+        <Link to="/register" style={styles.link}>Don't have an account? Register</Link>
       </div>
     </div>
   );
 };
 
-const Signup = () => {
+// Register
+const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleSignup = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      // Backend uses @RequestBody User for register
       await axios.post(`${API_BASE}/register`, { name, email, password });
-      alert('Signup Successful! Please login.');
-      navigate('/login');
-    } catch (err) {
-      alert('Signup failed.');
+      localStorage.setItem('user', JSON.stringify({ email, name }));
+      navigate('/profile', { replace: true });
+    } catch (error) {
+      alert('Registration failed.');
     }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2>Sign Up</h2>
-        <form onSubmit={handleSignup}>
+        <div style={styles.title}>Register</div>
+        <form onSubmit={handleRegister}>
           <input style={styles.input} type="text" placeholder="Name" value={name} onChange={e => setName(e.target.value)} required />
           <input style={styles.input} type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
           <input style={styles.input} type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
-          <button style={styles.button} type="submit">Sign Up</button>
+          <button style={styles.button} type="submit">Register</button>
         </form>
         <Link to="/login" style={styles.link}>Already have an account? Login</Link>
       </div>
@@ -83,6 +142,7 @@ const Signup = () => {
   );
 };
 
+// Profile
 const Profile = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
@@ -90,36 +150,39 @@ const Profile = () => {
   const handleLogout = async () => {
     try {
       await axios.post(`${API_BASE}/logout`);
+    } finally {
       localStorage.removeItem('user');
-      navigate('/login');
-    } catch (err) {
-      localStorage.removeItem('user');
-      navigate('/login');
+      navigate('/login', { replace: true });
     }
   };
-
-  if (!user) return <Navigate to="/login" />;
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h2>Profile</h2>
-        <p><strong>Email:</strong> {user.email}</p>
-        <p>Welcome back, Traveler.</p>
-        <button style={{ ...styles.button, backgroundColor: '#dc3545' }} onClick={handleLogout}>Logout</button>
+        <div style={styles.title}>Profile</div>
+        <div style={styles.text}><strong>Name:</strong> {user?.name}</div>
+        <div style={styles.text}><strong>Email:</strong> {user?.email}</div>
+        <button style={styles.button} onClick={handleLogout}>Logout</button>
       </div>
     </div>
   );
 };
 
+// App
 function App() {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<Navigate to="/profile" replace />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Profile />
+            </DashboardLayout>
+          </ProtectedRoute>
+        } />
       </Routes>
     </Router>
   );
